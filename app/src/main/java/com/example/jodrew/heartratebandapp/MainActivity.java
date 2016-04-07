@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
 
     private BandClient client = null;
     private Button btnStart, btnConsent;
-    private TextView txtStatus;
+    private TextView txtStatusHeart, txtStatusGsr;
 
 
 
@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onBandHeartRateChanged(final BandHeartRateEvent event) {
             if (event != null) {
-                appendToUI(String.format("Heart Rate = %d beats per minute\n"
+                HeartappendToUI(String.format("Heart Rate = %d beats per minute\n"
                         + "Quality = %s\n", event.getHeartRate(), event.getQuality()));
             }
         }
@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onBandGsrChanged(final BandGsrEvent event) {
             if (event != null) {
-                appendToUI(String.format("Resistance = %d kOhms\n", event.getResistance()));
+                GsrappendToUI(String.format("Resistance = %d kOhms\n", event.getResistance()));
             }
         }
     };
@@ -58,7 +58,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         //set heart rate
-        txtStatus = (TextView) findViewById(R.id.txtStatus);
+        txtStatusHeart = (TextView) findViewById(R.id.txtStatusHeart);
+        txtStatusGsr = (TextView) findViewById(R.id.txtStatusGsr);
 
         //set consent
         btnConsent = (Button) findViewById(R.id.btnConsent);
@@ -79,7 +80,8 @@ public class MainActivity extends AppCompatActivity {
         btnStart.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                txtStatus.setText("");
+                txtStatusHeart.setText("");
+                txtStatusGsr.setText("");
                 new SubscriptionTask().execute();
             }
         });
@@ -88,21 +90,21 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    //Kick off the heart rate reading
+    //Kick off the reading
     private class SubscriptionTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
             try {
                 if (getConnectedBandClient()) {
-                    if (client.getSensorManager().getCurrentHeartRateConsent() == UserConsent.GRANTED
-                            && client.getSensorManager().getCurrentGsrConsent() == UserConsent.GRANTED) {
+                    if (client.getSensorManager().getCurrentHeartRateConsent() == UserConsent.GRANTED) {
                         client.getSensorManager().registerHeartRateEventListener(mHeartRateEventListener);
                     } else {
-                        appendToUI("You have not given this application consent to access heart rate data yet."
+                        HeartappendToUI("You have not given this application consent to access heart rate data yet."
                                 + " Please press the Heart Rate Consent button.\n");
                     }
+                    client.getSensorManager().registerGsrEventListener(mGsrEventListener);
                 } else {
-                    appendToUI("Band isn't connected. Please make sure bluetooth is on and the band is in range.\n");
+                    HeartappendToUI("Band isn't connected. Please make sure bluetooth is on and the band is in range.\n");
                 }
             } catch (BandException e) {
                 String exceptionMessage="";
@@ -117,10 +119,10 @@ public class MainActivity extends AppCompatActivity {
                         exceptionMessage = "Unknown error occured: " + e.getMessage() + "\n";
                         break;
                 }
-                appendToUI(exceptionMessage);
+                HeartappendToUI(exceptionMessage);
 
             } catch (Exception e) {
-                appendToUI(e.getMessage());
+                HeartappendToUI(e.getMessage());
             }
             return null;
         }
@@ -143,7 +145,7 @@ public class MainActivity extends AppCompatActivity {
                         });
                     }
                 } else {
-                    appendToUI("Band isn't connected. Please make sure bluetooth is on and the band is in range.\n");
+                    HeartappendToUI("Band isn't connected. Please make sure bluetooth is on and the band is in range.\n");
                 }
             } catch (BandException e) {
                 String exceptionMessage="";
@@ -158,10 +160,10 @@ public class MainActivity extends AppCompatActivity {
                         exceptionMessage = "Unknown error occured: " + e.getMessage() + "\n";
                         break;
                 }
-                appendToUI(exceptionMessage);
+                HeartappendToUI(exceptionMessage);
 
             } catch (Exception e) {
-                appendToUI(e.getMessage());
+                HeartappendToUI(e.getMessage());
             }
             return null;
         }
@@ -191,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        txtStatus.setText("");
+        txtStatusHeart.setText("");
     }
     
     @Override
@@ -200,8 +202,9 @@ public class MainActivity extends AppCompatActivity {
         if (client != null) {
             try {
                 client.getSensorManager().unregisterHeartRateEventListener(mHeartRateEventListener);
+                client.getSensorManager().unregisterGsrEventListener(mGsrEventListener);
             } catch (BandIOException e) {
-                appendToUI(e.getMessage());
+                HeartappendToUI(e.getMessage());
             }
         }
     }
@@ -220,11 +223,20 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    private void appendToUI(final String string) {
+    private void HeartappendToUI(final String string) {
         this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                txtStatus.setText(string);
+                txtStatusHeart.setText(string);
+            }
+        });
+    }
+
+    private void GsrappendToUI(final String string) {
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                txtStatusGsr.setText(string);
             }
         });
     }
