@@ -22,6 +22,8 @@ import com.microsoft.band.UserConsent;
 import com.microsoft.band.sensors.BandHeartRateEvent;
 import com.microsoft.band.sensors.BandHeartRateEventListener;
 import com.microsoft.band.sensors.HeartRateConsentListener;
+import com.microsoft.band.sensors.BandGsrEvent;
+import com.microsoft.band.sensors.BandGsrEventListener;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,6 +39,15 @@ public class MainActivity extends AppCompatActivity {
             if (event != null) {
                 appendToUI(String.format("Heart Rate = %d beats per minute\n"
                         + "Quality = %s\n", event.getHeartRate(), event.getQuality()));
+            }
+        }
+    };
+
+    private BandGsrEventListener mGsrEventListener = new BandGsrEventListener() {
+        @Override
+        public void onBandGsrChanged(final BandGsrEvent event) {
+            if (event != null) {
+                appendToUI(String.format("Resistance = %d kOhms\n", event.getResistance()));
             }
         }
     };
@@ -69,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 txtStatus.setText("");
-                new HeartRateSubscriptionTask().execute();
+                new SubscriptionTask().execute();
             }
         });
 
@@ -78,12 +89,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //Kick off the heart rate reading
-    private class HeartRateSubscriptionTask extends AsyncTask<Void, Void, Void> {
+    private class SubscriptionTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
             try {
                 if (getConnectedBandClient()) {
-                    if (client.getSensorManager().getCurrentHeartRateConsent() == UserConsent.GRANTED) {
+                    if (client.getSensorManager().getCurrentHeartRateConsent() == UserConsent.GRANTED
+                            && client.getSensorManager().getCurrentGsrConsent() == UserConsent.GRANTED) {
                         client.getSensorManager().registerHeartRateEventListener(mHeartRateEventListener);
                     } else {
                         appendToUI("You have not given this application consent to access heart rate data yet."
