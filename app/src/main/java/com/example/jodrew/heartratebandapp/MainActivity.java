@@ -21,6 +21,8 @@ import com.microsoft.band.ConnectionState;
 import com.microsoft.band.UserConsent;
 import com.microsoft.band.sensors.BandHeartRateEvent;
 import com.microsoft.band.sensors.BandHeartRateEventListener;
+import com.microsoft.band.sensors.BandRRIntervalEvent;
+import com.microsoft.band.sensors.BandRRIntervalEventListener;
 import com.microsoft.band.sensors.HeartRateConsentListener;
 import com.microsoft.band.sensors.BandGsrEvent;
 import com.microsoft.band.sensors.BandGsrEventListener;
@@ -29,9 +31,16 @@ public class MainActivity extends AppCompatActivity {
 
     private BandClient client = null;
     private Button btnStart, btnConsent;
-    private TextView txtStatusHeart, txtStatusGsr;
+    private TextView txtStatusHeart, txtStatusGsr, txtStatusRRI;
 
-
+    private BandRRIntervalEventListener mRRIntervalEventListener = new BandRRIntervalEventListener() {
+        @Override
+        public void onBandRRIntervalChanged(final BandRRIntervalEvent event) {
+            if (event != null) {
+                RRIappendToUI(String.format("RR Interval = %.3f s\n", event.getInterval()));
+            }
+        }
+    };
 
     private BandHeartRateEventListener mHeartRateEventListener = new BandHeartRateEventListener() {
         @Override
@@ -60,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
         //set heart rate
         txtStatusHeart = (TextView) findViewById(R.id.txtStatusHeart);
         txtStatusGsr = (TextView) findViewById(R.id.txtStatusGsr);
+        txtStatusRRI = (TextView) findViewById(R.id.txtStatusRRI);
 
         //set consent
         btnConsent = (Button) findViewById(R.id.btnConsent);
@@ -73,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
             @SuppressWarnings("unchecked")
             @Override
             public void onClick(View v) {
-                new HeartRateConsentTask().execute(reference);
+                new ConsentTask().execute(reference);
             }
         });
 
@@ -82,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 txtStatusHeart.setText("");
                 txtStatusGsr.setText("");
+                txtStatusRRI.setText("");
                 new SubscriptionTask().execute();
             }
         });
@@ -98,8 +109,9 @@ public class MainActivity extends AppCompatActivity {
                 if (getConnectedBandClient()) {
                     if (client.getSensorManager().getCurrentHeartRateConsent() == UserConsent.GRANTED) {
                         client.getSensorManager().registerHeartRateEventListener(mHeartRateEventListener);
+                        client.getSensorManager().registerRRIntervalEventListener(mRRIntervalEventListener);
                     } else {
-                        HeartappendToUI("You have not given this application consent to access heart rate data yet."
+                        HeartappendToUI("You have not given this application consent to access heart rate or RRI data yet."
                                 + " Please press the Heart Rate Consent button.\n");
                     }
                     client.getSensorManager().registerGsrEventListener(mGsrEventListener);
@@ -131,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     //Need to get user consent
-    private class HeartRateConsentTask extends AsyncTask<WeakReference<Activity>, Void, Void> {
+    private class ConsentTask extends AsyncTask<WeakReference<Activity>, Void, Void> {
         @Override
         protected Void doInBackground(WeakReference<Activity>... params) {
             try {
@@ -194,6 +206,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         txtStatusHeart.setText("");
+        txtStatusRRI.setText("");
+        txtStatusGsr.setText("");
     }
     
     @Override
@@ -203,6 +217,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 client.getSensorManager().unregisterHeartRateEventListener(mHeartRateEventListener);
                 client.getSensorManager().unregisterGsrEventListener(mGsrEventListener);
+                client.getSensorManager().unregisterRRIntervalEventListener(mRRIntervalEventListener);
             } catch (BandIOException e) {
                 HeartappendToUI(e.getMessage());
             }
@@ -228,6 +243,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 txtStatusHeart.setText(string);
+            }
+        });
+    }
+
+    private void RRIappendToUI(final String string) {
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                txtStatusRRI.setText(string);
             }
         });
     }

@@ -26,6 +26,12 @@
             android:text="@string/start" />
 
         <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtStatusRRI"
+            android:layout_gravity="center_horizontal" />
+
+        <EditText
             android:id="@+id/txtStatusGsr"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
