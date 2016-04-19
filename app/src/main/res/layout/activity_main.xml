@@ -25,11 +25,21 @@
             android:layout_height="wrap_content"
             android:text="@string/start" />
 
-        <TextView
-            android:id="@+id/txtStatus"
+        <EditText
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text=""
+            android:id="@+id/txtStatusRRI"
+            android:layout_gravity="center_horizontal" />
+
+        <EditText
+            android:id="@+id/txtStatusGsr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:height="50dp"/>
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtStatusHeart" />
     </LinearLayout>
 </RelativeLayout>
