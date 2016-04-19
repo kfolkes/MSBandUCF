@@ -19,7 +19,7 @@
             android:layout_height="wrap_content"
             android:id="@+id/chronometer"
             android:layout_gravity="center_horizontal"
-            android:format="00:00" />
+            android:format="%s" />
 
         <Button
             android:id="@+id/btnStart"

@@ -1,5 +1,8 @@
 package com.example.jodrew.heartratebandapp;
 
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Environment;
 import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -10,8 +13,18 @@ import android.widget.Button;
 import android.view.View.OnClickListener;
 import android.app.Activity;
 import android.os.AsyncTask;
+import android.widget.Toast;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+import android.os.Handler;
 
 //Band References
 import com.microsoft.band.BandClient;
@@ -31,16 +44,48 @@ import com.microsoft.band.sensors.BandGsrEventListener;
 
 public class MainActivity extends AppCompatActivity {
 
+    public long msElapsed;
+    public boolean isRunning = false;
+
     private BandClient client = null;
-    private Button btnStart;
+    private Button btnStart, btnStop;
     private TextView txtStatusHeart, txtStatusGsr, txtStatusRRI;
-    private Chronometer chronometer;
+    private ArrayList HR = new ArrayList();
+    private ArrayList GSR = new ArrayList();
+    private ArrayList RRI = new ArrayList();
+    private ArrayList time = new ArrayList();
+    private ArrayList times = new ArrayList();
+    private int secs;
+    private int mins;
+
+    private long startTime = 0;
+    Handler timerHandler = new Handler();
+    Runnable timerRunnable = new Runnable() {
+
+        @Override
+        public void run() {
+            long millis = System.currentTimeMillis() - startTime;
+            int seconds = (int) (millis / 1000);
+            int minutes = seconds / 60;
+            seconds = seconds % 60;
+
+            secs = seconds;
+            mins = minutes;
+
+
+            timerHandler.postDelayed(this, 500);
+        }
+    };
+
+
+    public String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/a";
 
     private BandRRIntervalEventListener mRRIntervalEventListener = new BandRRIntervalEventListener() {
         @Override
         public void onBandRRIntervalChanged(final BandRRIntervalEvent event) {
             if (event != null) {
                 RRIappendToUI(String.format("RR Interval = %.3f s\n", event.getInterval()));
+                RRI.add(event.getInterval());
             }
         }
     };
@@ -50,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
         public void onBandHeartRateChanged(final BandHeartRateEvent event) {
             if (event != null) {
                 HeartappendToUI(String.format("Heart Rate = %d beats per minute\n", event.getHeartRate()));
+                HR.add(event.getHeartRate());
+
             }
         }
     };
@@ -59,6 +106,10 @@ public class MainActivity extends AppCompatActivity {
         public void onBandGsrChanged(final BandGsrEvent event) {
             if (event != null) {
                 GsrappendToUI(String.format("Resistance = %d kOhms\n", event.getResistance()));
+                GSR.add(event.getResistance());
+                time.add(mins);
+                times.add(secs);
+
             }
         }
     };
@@ -75,8 +126,8 @@ public class MainActivity extends AppCompatActivity {
 
         //set start heart rate
         btnStart = (Button) findViewById(R.id.btnStart);
+        btnStop = (Button) findViewById(R.id.btnStop);
 
-        final WeakReference<Activity> reference = new WeakReference<Activity>(this);
 
         btnStart.setOnClickListener(new OnClickListener() {
             @Override
@@ -84,12 +135,26 @@ public class MainActivity extends AppCompatActivity {
                 txtStatusHeart.setText("");
                 txtStatusGsr.setText("");
                 txtStatusRRI.setText("");
+                Chronometer chronometer = (Chronometer) findViewById(R.id.chronometer);
+                startTimer(chronometer);
                 new SubscriptionTask().execute();
+
+                timerHandler.removeCallbacks(timerRunnable);
+                startTime = System.currentTimeMillis();
+                timerHandler.postDelayed(timerRunnable, 0);
             }
         });
 
+        btnStop.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Chronometer chronometer = (Chronometer) findViewById(R.id.chronometer);
+                onPause(chronometer);
+            }
+        });
 
-
+        File dir = new File(path);
+        dir.mkdirs();
     }
 
     //Kick off the reading
@@ -110,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
                     HeartappendToUI("Band isn't connected. Please make sure bluetooth is on and the band is in range.\n");
                 }
             } catch (BandException e) {
-                String exceptionMessage="";
+                String exceptionMessage = "";
                 switch (e.getErrorType()) {
                     case UNSUPPORTED_SDK_VERSION_ERROR:
                         exceptionMessage = "Microsoft Health BandService doesn't support your SDK Version. Please update to latest SDK.\n";
@@ -130,14 +195,14 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
-        protected Void startTimer(){
-            chronometer = (Chronometer) findViewById(R.id.chronometer);
-            chronometer.setBase(SystemClock.elapsedRealtime());
-            chronometer.start();
-            return null;
-        }
+
     }
 
+    protected Void startTimer(Chronometer chronometer) {
+        chronometer.setBase(SystemClock.elapsedRealtime());
+        chronometer.start();
+        return null;
+    }
 
     //Get connection to band
     private boolean getConnectedBandClient() throws InterruptedException, BandException {
@@ -151,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
             }
             //need to set client if there are devices
             client = BandClientManager.getInstance().create(getBaseContext(), devices[0]);
-        } else if(ConnectionState.CONNECTED == client.getConnectionState()) {
+        } else if (ConnectionState.CONNECTED == client.getConnectionState()) {
             return true;
         }
 
@@ -159,17 +224,16 @@ public class MainActivity extends AppCompatActivity {
         return ConnectionState.CONNECTED == client.connect().await();
     }
 
-    @Override
-    protected void onResume() {
+
+    protected void onResume(Chronometer chronometer) {
         super.onResume();
         txtStatusHeart.setText("");
         txtStatusRRI.setText("");
         txtStatusGsr.setText("");
         chronometer.start();
     }
-    
-    @Override
-    protected void onPause() {
+
+    protected void onPause(Chronometer chronometer) {
         super.onPause();
         if (client != null) {
             try {
@@ -181,6 +245,57 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         chronometer.stop();
+
+        File file = new File(path + "/save.txt");
+
+        int x = GSR.size();
+        String[] saveText = new String[x+2];
+        //long timeElapsed = msElapsed;
+        saveText[0] = "Time:    HR:    GSR:   RRI:\nm s       bpm   kOhms    --";
+        saveText[1] = "";
+
+        for (int i = 2; i < x; i++) {
+            saveText[1] += ("\n" + time.get(i) + " " + times.get(i) + "      " + HR.get(i) + "      " + GSR.get(i) + "  " + String.format("%.4f", RRI.get(i)) + " ");
+        }
+        //Toast.makeText(getApplicationContext(), "Sazed", Toast.LENGTH_LONG).show();
+        //Save(file, saveText);
+        timerHandler.removeCallbacks(timerRunnable);
+        EndExperiment(saveText);
+
+    }
+
+
+    public static void Save(File file, String[] data)
+    {
+        FileOutputStream fos = null;
+        try
+        {
+            fos = new FileOutputStream(file);
+        }
+        catch (FileNotFoundException e) {e.printStackTrace();}
+        try
+        {
+            try
+            {
+                for (int i = 0; i<data.length; i++)
+                {
+                    fos.write(data[i].getBytes());
+                    if (i < data.length-1)
+                    {
+                        fos.write("\n".getBytes());
+                    }
+                }
+            }
+            catch (IOException e) {e.printStackTrace();}
+        }
+        finally
+        {
+            try
+            {
+                fos.close();
+            }
+            catch (IOException e) {e.printStackTrace();}
+        }
     }
     
     @Override
@@ -223,6 +338,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+
+    public void EndExperiment(String[] saveText){
+        //we gotta find the path, but it's in /savedFile.txt
+
+
+
+        String[] email = {"talresearchlab@gmail.com"};
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setData(Uri.parse("mailto:"));
+        intent.putExtra(Intent.EXTRA_EMAIL, email);
+        //here we need to say "participant #1: names
+        //need to input string name
+        intent.putExtra(Intent.EXTRA_SUBJECT, OverlayScreen.Name + " " + OverlayScreen.Date + " " + OverlayScreen.Time);
+
+        intent.putExtra(Intent.EXTRA_TEXT, saveText[0] + saveText[1]);
+
+        //here you pass in the entire file
+        //start it
+        intent.setType("message/rfc822");
+        startActivity(Intent.createChooser(intent, "Send email..."));
+    }
+
 
 
 }
