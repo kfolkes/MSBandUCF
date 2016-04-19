@@ -257,6 +257,26 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 2; i < x; i++) {
             saveText[1] += ("\n" + time.get(i) + " " + times.get(i) + "      " + HR.get(i) + "      " + GSR.get(i) + "  " + String.format("%.4f", RRI.get(i)) + " ");
         }
+        saveText[1] += "\nAverages:";
+        int j = 0;
+        int i = 0, ave = 0;
+        float HHRdata = 0, GSRdata = 0, RRIdata = 0;
+        //newest one!
+        while(Integer.valueOf(time.get(i).toString()) == j)
+        {
+            while(time.get(i) == j)
+            {
+                HHRdata += Float.valueOf(HR.get(i).toString());
+                GSRdata += Float.valueOf(GSR.get(i).toString());
+                RRIdata += Float.valueOf(RRI.get(i).toString());
+                i++;
+                ave++;
+            }
+            saveText[1] += saveText[1] += ("\n" + time.get(i) + HHRdata/ave + "      " + GSRdata/ave + "  " + RRIdata/ave + " ");
+            ave = 0;
+            j++;
+        }
+
         //Toast.makeText(getApplicationContext(), "Sazed", Toast.LENGTH_LONG).show();
         //Save(file, saveText);
         timerHandler.removeCallbacks(timerRunnable);
