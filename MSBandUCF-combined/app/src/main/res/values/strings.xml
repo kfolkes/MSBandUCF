@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">TAL MSBand App</string>
+    <string name="action_settings">Settings</string>
+    <string name="start">Start Recording Data</string>
+    <string name="stop">Stop Recording Data</string>
+    <string name="consent">Heart Rate Consent</string>
+
+    <string name="button_submit">Heart Rate Consent</string>
+    <string name="user_id">Participant ID</string>
+
+</resources>
